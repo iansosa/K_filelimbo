@@ -1,0 +1,200 @@
+\documentclass[11pt]{article}   	
+\usepackage{geometry}                		% See geometry.pdf to learn the layout options. There are lots.
+\geometry{a4paper}                   		% ... or a4paper or a5paper or ... 
+%\geometry{landscape}                		% Activate for rotated page geometry
+%\usepackage[parfill]{parskip}    		% Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}				% Use pdf, png, jpg, or epsÂ§ with pdflatex; use eps in DVI mode
+								% TeX will automatically convert eps --> pdf in pdflatex		
+\usepackage{amssymb}
+\usepackage[latin1] {inputenc} % para las tildes y las ñ
+\usepackage{amssymb, amsmath, amsbsy} % simbolitos
+\usepackage{upgreek} % para poner letras griegas sin cursiva
+\usepackage{cancel} % para tachar
+\usepackage{mathdots} % para el comando \iddots
+\usepackage{mathrsfs} % para formato de letra
+\usepackage{stackrel} % para escribir algo arriba de cada termino de una ecuacion
+\usepackage{cite} % para citar
+\usepackage[pageref,spanish]{backref} % para citar referenciando la pagina
+\setlength{\parindent}{0cm} %sirve para anular la sangria de cada parrafo
+%SetFonts
+\renewcommand{\figurename}{Fig.} %para cambiar el caption de las figuras
+\renewcommand{\refname}{Referencias}
+%SetFonts
+\usepackage{float}
+\usepackage[textfont={small,it}]{caption} %cambia el formato de los captions
+\usepackage[labelfont=bf]{caption} %El Fig aparece en negrita
+\usepackage{multirow} 
+\usepackage[spanish,es-tabla]{babel}
+
+\title{Guía 2}
+\author {}
+\date{ }
+
+\begin{document}
+\maketitle
+
+
+\section{Función de correlación en 1D}
+\subsection*{a)}
+\subsection*{b)}
+\section{Integración numérica}
+\subsection*{a)}
+\subsection*{b)}
+\subsection*{c)}
+\subsection*{d)}
+\subsection*{e)}
+\subsection*{f)}
+\section{Reducción y Prefix-Scan: suma de series}
+\subsection*{a)}
+\subsection*{b)}
+\subsection*{c)}
+\section{Una transformación iterada y caótica: mapeo logístico}
+\subsection*{a)}
+\subsection*{b)}
+\subsection*{c)}
+\subsection*{d)}
+\section{Otra transformación iterada y caótica: Ecuaciones de Lorenz}
+\subsection*{a)}
+\subsection*{b)}
+Definiendo a $X_i(t)=\eta(x=idx, t)$, $m=\mu dx$, $kdx=K$ es posible reescribir al Lagrangiano como:
+$$
+\textit{L}=\displaystyle{\sum \limits_{n=0}^{N}}\left[\frac{1}{2}\mu\left(\frac{d\eta(x,t)}{dt}\right)^{2}+\mu g\eta(x,t)-\frac{1}{2}K\left(\frac{\eta(x,t)-\eta(x+dx,t)}{dx}\right)^{2}\right]dx
+$$
+Por lo que en el limite cuando $dx\to 0$, $(N,k)\to \infty$, $kdx=K=cte$, podemos escribir a $L$ como una integral:
+\begin{equation}\label{5}
+L=\displaystyle{\int_0^l\left[\frac{1}{2}\mu\left(\frac{d\eta(x,t)}{dt}\right)^{2}+\mu g\eta(x,t)-\frac{1}{2}K\left(\frac{d\eta(x,t)}{dx}\right)^{2}\right]\,dx}=\displaystyle{\int_0^l\delta Ldx}
+\end{equation}
+ 
+Esta ecuación determina una densidad Lagrangiana $\delta L$, lo que nos da la ecuación diferencial que tiene que cumplir el desplazamiento $\eta(x,t)$ (ver Apéndice).
+
+\begin{equation}\label{6}
+g=\frac{d^{2}\eta(x,t)}{dt^{2}}-\frac{K}{\mu}\frac{d^{2}\eta(x,t)}{dx^{2}}
+\end{equation}
+
+\section*{Solución del movimiento}
+La solución de la ecuación diferencial \ref{6} tiene forma de suma entre una solución particular y una homogénea, que de forma general consiste de la superposición de dos ondas propagándose en sentidos opuestos.
+
+\begin{equation}\label{7}
+\eta(x,t)=\eta_{hom}(x,t)+\eta_{p}(x,t)
+\end{equation}
+
+\begin{equation}\label{8}
+\eta_{hom}(x,t)=f_+(x-\sqrt{\frac{K}{\mu}}t)+f_-(x+\sqrt{\frac{K}{\mu}}t)
+\end{equation}
+
+\begin{equation}\label{9}
+\eta_{p}(x,t)=\frac{1}{2}gt^{2}
+\end{equation}
+
+Realizando el mismo procedimiento que para $L$ en la ecuacion \ref{2}, podemos obtener el paso al continuo de $X_i(0)$, el mismo nos dará la condición inicial del sistema.
+
+\begin{equation}\label{10}
+\eta(x,0)=\left(x-\frac{x^{2}}{2l}\right) \frac{gM}{K}
+\end{equation}
+
+Ya que sabemos que $\eta(l,0)=l$ podemos encontrar una igualdad entre las constantes $g$, $M$ y $K$. Y reescribir la velocidad de propagación en $x$.
+
+\begin{equation}\label{11}
+K=\frac{1}{2}gM
+\end{equation}
+
+\begin{equation}\label{11.1}
+V_x=\sqrt{\frac{K}{\mu}}=\sqrt{\frac{gl}{2}}
+\end{equation}
+
+Utilizando la condición inicial del sistema (\ref{10}) y la igualdad anterior obtenemos:
+
+\begin{equation}\label{12}
+f_+(x)=f_-(x)=\left(x-\frac{x^{2}}{2l}\right)
+\end{equation}
+
+Por lo que el desplazamiento $\eta(x,t)$ queda expresado como:
+
+\begin{equation}\label{13}
+\eta(x,t)=\left(x-\sqrt{\frac{gl}{2}}t-\frac{(x-\sqrt{\frac{gl}{2}}t)^{2}}{2l}\right)+\left(x+\sqrt{\frac{gl}{2}}t-\frac{(x+\sqrt{\frac{gl}{2}}t)^{2}}{2l}\right)+\frac{1}{2}gt^{2}
+\end{equation}
+
+Sin mucho esfuerzo se puede ver que:
+
+$$
+\eta(x,t)=\eta(x,0)
+$$
+
+Esto quiere decir que la solución en la que el slinky se queda colgando en equilibrio sin moverse para todo tiempo (nunca se lo suelta), es la superposición de 2 ondas que se propagan en sentido contrario con cada diferencial de desplazamiento $d\eta$ acelerando por acción gravitatoria.\\
+
+Al momento de soltar el slinky, se elimina la onda $f(x-V_xt)$ que se propaga hacia $x$ positivos. Esto comienza en el extremo superior, y esta perturbación viaja en $x$ con velocidad $V_x$. Por lo que para $x>V_xt$ el slinky se mantendrá quieto con la solución que es superposición de ambas ondas.\\
+
+Al mismo tiempo para $x<V_xt$ tenemos que la expresión del desplazamiento $\eta(x,t)$ será la combinación de la onda que se propaga a $x$ negativos, con el término dado por la acción gravitatoria, y otro término que depende de la velocidad del slinky.\\
+
+Dado que $\eta(x,t)$ en $x<V_xt$ también tiene que cumplir \ref{6}, se puede encontrar una solucion para este intervalo, considerando que no existe la onda que se propaga a $x$ positivos:
+
+\begin{equation}\label{15}
+\eta_-(x,t')=2\left(x+\sqrt{\frac{gl}{2}}t'-\frac{(x+\sqrt{\frac{gl}{2}}t')^{2}}{2l}\right)+\frac{1}{2} gt'^{2}+V_{CM}t'=\eta(x,0)+2 V_xt'
+\end{equation}
+Donde $t'=t-\frac{x}{V_x}>0$, tiempo medido desde el momento en el que la posición $\eta(x,0)$ pasó de estar quieta a empezar a moverse (cambio de solución), y $V_{CM}$ velocidad  del $CM$ a tiempo $\frac{x}{V_x}$ \\
+
+Por lo que la solución general del movimiento queda escrita como:
+
+
+\begin{equation}\label{15.1}
+\eta(x,t)= \left\{ \begin{array}{lcc}
+2\left(x-\frac{x^{2}}{2l}\right)+2\sqrt{\frac{gl}{2}}(t-\frac{x}{\sqrt{\frac{gl}{2}}}) &   si  & x \leq t\sqrt{\frac{gl}{2}} \\
+\\ 2\left(x-\frac{x^{2}}{2l}\right) &  si & x > t\sqrt{\frac{gl}{2}} \\
+
+\end{array}
+\right.
+\end{equation}
+
+Para  $\mathrm{x}:[0,l]$ , $\mathrm{t}:[0,\sqrt{\frac{2l}{g}}]$\\
+
+Luego es posible encontrar la posición del centro de masa en función del tiempo según la expresión:
+
+$$CM(t)=\displaystyle{\int_0^l\eta(x,t)\frac{\mu}{M}\,dx=\int_0^{t\sqrt{\frac{gl}{2}}}\left[\eta(x,0)+2\sqrt{\frac{gl}{2}}(t-\frac{x}{\sqrt{\frac{gl}{2}}})\right]\frac{\mu}{M}dx+\int_{t\sqrt{\frac{gl}{2}}}^l\eta(x,0)\frac{\mu}{M}\,dx}$$\\
+
+$$CM(t)=\frac{2}{3}l+\frac{1}{2}gt^{2}$$
+
+
+
+\section*{Apéndice}
+
+\subsection*{Densidad Lagrangiana}
+
+La acción $S$ ahora está escrita como la integral doble temporal/espacial de la densidad Lagrangiana, pero se tiene que seguir cumpliendo que $\delta S=0$ para el camino que la minimiza.
+ 
+\begin{equation}\label{16}
+\delta S=\delta \displaystyle{\int_{t_1}^{t_2}\int_{x_1}^{x_2}\delta L\left(\eta(x,t), \frac{d\eta(x,t)}{dx}, \frac{d\eta(x,t)}{dt},x,t\right)\,dxdt=0}
+\end{equation}
+
+Haciendo pequeñas variaciones en el camino por medio de una perturbación $\xi(x,t)$ que cumple las condiciones de borde:
+
+\begin{equation}\label{17}
+\eta(x,t,\alpha)=\eta(x,t,0)+\alpha \xi(x,t)
+\end{equation}
+
+\begin{equation}\label{18}
+\xi(x_1,t)=\xi(x_2,t)=\xi(x,t_1)=\xi(x,t_2)=0
+\end{equation}
+
+Se puede diferenciar el integrando y encontrar una expresión para $\dfrac{dS}{d\alpha}$:
+\begin{equation}\label{19}
+\dfrac{dS}{d\alpha}=\displaystyle{\int_{t_1}^{t_2}\int_{x_1}^{x_2}\left[\frac{d\delta L}{d\eta} \frac{d\eta}{d\alpha}+ \frac{d\delta L}{d(\frac{d\eta}{dt})}\frac{d(\frac{d\eta}{dt})}{d\alpha}+  \frac{d\delta L}{d(\frac{d\eta}{dx})}\frac{d(\frac{d\eta}{dx})}{d\alpha}\right]\,dxdt=0}
+\end{equation}
+
+Luego, utilizando \ref{18} se puede reescribir la integral como:
+
+\begin{equation}\label{20}
+\displaystyle{\int_{t_1}^{t_2}\int_{x_1}^{x_2}\left[\frac{d\delta L}{d\eta} \frac{d\eta}{d\alpha}- \frac{d}{dt}\left(\frac{d\delta L}{d(\frac{d\eta}{dt})}\right) \frac{d\eta}{d\alpha}- \frac{d}{dx}\left(\frac{d\delta L}{d(\frac{d\eta}{dx})}\right) \frac{d\eta}{d\alpha}\right]\,dxdt=0}
+\end{equation}
+Ya que $\dfrac{d\eta}{d\alpha}$ es arbitrario, se puede sacar de factor común y la condición que se tiene que cumplir queda escrita como:
+\begin{equation}\label{21}
+\frac{d\delta L}{d\eta} - \frac{d}{dt}\left(\frac{d\delta L}{d(\frac{d\eta}{dt})}\right) - \frac{d}{dx}\left(\frac{d\delta L}{d(\frac{d\eta}{dx})}\right)=0
+\end{equation}
+
+
+
+
+ 
+
+\end{document}
+
+
