@@ -36,13 +36,13 @@ typedef thrust::device_vector< value_type > state_type;
 typedef thrust::device_vector< size_t > index_vector_type;
 
 __global__
-void calcproperties(double *ecin_aux_d,double *epot_aux_d, double *flux1_aux_d, double *flux_aux_d, double *elost_aux_d, double *x_vec_lin_d, double *I_lin_d, double *A_lin_d, double *G_lin_d, int N, int steps,double K, double *xmed_aux_d)
+void calcproperties(value_type *ecin_aux_d,value_type *epot_aux_d, value_type *flux1_aux_d, value_type *flux_aux_d, value_type *elost_aux_d, value_type *x_vec_lin_d, value_type *I_lin_d, value_type *A_lin_d, value_type *G_lin_d, int N, int steps,value_type K, value_type *xmed_aux_d)
 {
  	int i = blockIdx.x*blockDim.x + threadIdx.x;
-	double epot=0;
-	double f=0;
-	double flux=0;
-    double cos_sum = 0.0 , sin_sum = 0.0;
+	value_type epot=0;
+	value_type f=0;
+	value_type flux=0;
+    value_type cos_sum = 0.0 , sin_sum = 0.0;
 
 
   if (i < steps) 
@@ -82,8 +82,8 @@ void calcproperties(double *ecin_aux_d,double *epot_aux_d, double *flux1_aux_d, 
         	cos_sum += cos( x_vec_lin_d[0+i*2+steps*2*l] );
        	 	sin_sum += sin( x_vec_lin_d[0+i*2+steps*2*l] );
     	}
-    	cos_sum /= double( N-1 );
-    	sin_sum /= double( N-1 );
+    	cos_sum /= value_type( N-1 );
+    	sin_sum /= value_type( N-1 );
 		xmed_aux_d[i]=atan2( sin_sum , cos_sum );		
 	}
 }
@@ -295,7 +295,7 @@ void inicialcond(thrust::host_vector<value_type> &x,int N,boost::mt19937 &rng,in
     }
 }
 
-void fillA(arma::Mat<double> &A,int N,boost::mt19937 &rng,int caso,double prob_0)
+void fillA(arma::Mat<value_type> &A,int N,boost::mt19937 &rng,int caso,value_type prob_0)
 {
 
     boost::uniform_real<> unif( 0, 1 );//la distribucion de probabilidad uniforme entre cero y 2pi
@@ -357,7 +357,7 @@ void fillA(arma::Mat<double> &A,int N,boost::mt19937 &rng,int caso,double prob_0
     }
 }
 
-void fillG(std::vector<double> &G,int N,boost::mt19937 &rng,int caso)
+void fillG(std::vector<value_type> &G,int N,boost::mt19937 &rng,int caso)
 {
 
     boost::normal_distribution<> unif(2.5, 0.2 );//la distribucion de probabilidad uniforme entre cero y 2pi
@@ -389,7 +389,7 @@ void fillG(std::vector<double> &G,int N,boost::mt19937 &rng,int caso)
 	}
 }
 
-void fillI(std::vector<double> &I,int N,boost::mt19937 &rng,int caso)
+void fillI(std::vector<value_type> &I,int N,boost::mt19937 &rng,int caso)
 {
     if (caso==0)
     {
@@ -418,7 +418,7 @@ void fillI(std::vector<double> &I,int N,boost::mt19937 &rng,int caso)
 
 }
 
-void fillW(std::vector<double> &Fw,int N,boost::mt19937 &rng,int caso)
+void fillW(std::vector<value_type> &Fw,int N,boost::mt19937 &rng,int caso)
 {
     boost::uniform_real<> unif( 0, 10 );//la distribucion de probabilidad uniforme entre cero y 2pi
     boost::variate_generator< boost::mt19937&, boost::uniform_real<> > gen( rng , unif );//gen es una funcion que toma el engine y la distribucion y devuelve el numero random
@@ -449,7 +449,7 @@ void fillW(std::vector<double> &Fw,int N,boost::mt19937 &rng,int caso)
     }
 }
 
-void fillFw(std::vector<double> &Fw,int N,boost::mt19937 &rng,int caso)
+void fillFw(std::vector<value_type> &Fw,int N,boost::mt19937 &rng,int caso)
 {
     boost::uniform_real<> unif( 0, 10 );//la distribucion de probabilidad uniforme entre cero y 2pi
     boost::variate_generator< boost::mt19937&, boost::uniform_real<> > gen( rng , unif );//gen es una funcion que toma el engine y la distribucion y devuelve el numero random
@@ -488,7 +488,7 @@ void fillFw(std::vector<double> &Fw,int N,boost::mt19937 &rng,int caso)
     }
 }
 
-void printsave(size_t steps, thrust::host_vector<value_type> &x_vec,std::vector<double> &times,int N,int i, int loops) //1 tiempo. 2 posicion. 3 momento. 4 energia potencial. 5 energia cinetica. 6 energia. 7 energia Total
+void printsave(size_t steps, thrust::host_vector<value_type> &x_vec,std::vector<value_type> &times,int N,int i, int loops) //1 tiempo. 2 posicion. 3 momento. 4 energia potencial. 5 energia cinetica. 6 energia. 7 energia Total
 {
 
 	FILE *f1;
@@ -517,7 +517,7 @@ void printsave(size_t steps, thrust::host_vector<value_type> &x_vec,std::vector<
 	fclose(f1);
 }
 
-void pasteA(arma::Mat<double> &A,thrust::host_vector< value_type > &h_A,int N)
+void pasteA(arma::Mat<value_type> &A,thrust::host_vector< value_type > &h_A,int N)
 {
 	for (int i = 0; i < N; ++i)
 	{
@@ -541,7 +541,8 @@ int number_of_loops(value_type Total_time, int N, value_type dt)
     int GB_inMemory=3.5;
 
     size_t total_bytes=(size_t)((sizeof(value_type)*Total_time*2*N/dt));
-    printf("Total_GB_tiempo: %lf\n",(double)total_bytes/(1024*1024*1024));
+    printf("Total_GB_tiempo: %lf\n",(value_type)total_bytes/(1024*1024*1024));
+    printf("Total_GB_head: %lf\n",(value_type)sizeof(value_type)*(6*N+N*N)/(1024*1024*1024));
     return(1+(int)(total_bytes/(GB_inMemory*pow(1024,3)-sizeof(value_type)*(6*N+N*N))));
 }
 
