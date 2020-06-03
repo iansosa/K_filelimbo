@@ -261,230 +261,70 @@ struct push_back_state_and_time
 
 
 
-void inicialcond(thrust::host_vector<value_type> &x,int N,boost::mt19937 &rng,int caso)
+void inicialcond(state_type &d_x,int N,boost::mt19937 &rng)
 {
     boost::uniform_real<> unif( 0, 2*M_PI );//la distribucion de probabilidad uniforme entre cero y 2pi
     boost::variate_generator< boost::mt19937&, boost::uniform_real<> > gen( rng , unif );//gen es una funcion que toma el engine y la distribucion y devuelve el numero random
-
-    if(caso==0)
+   
+    for (int i = 0; i < N; ++i)
     {
-    	FILE *w= fopen("Xi.txt", "w");
-    	for (int i = 0; i < N; ++i)
-		{
-			fprintf(w, "%f  ",gen() );
-			fprintf(w, "%f\n",0.0 );
-		}
-		fclose(w);
-		FILE *r= fopen("Xi.txt", "r");
-		for (int i = 0; i < N; ++i)
-		{
-			fscanf(r, "%lf", &x[2*i]); // posicion inicial i
-			fscanf(r, "%lf", &x[2*i+1]); // momento inicial i
-		}
-		fclose(r);
-    }
-    if(caso==1)
-    {
-    	FILE *r= fopen("Xi.txt", "r");
-		for (int i = 0; i < N; ++i)
-		{
-			fscanf(r, "%lf", &x[2*i]); // posicion inicial i
-			fscanf(r, "%lf", &x[2*i+1]); // momento inicial i
-		}
-		fclose(r);
+        d_x[2*i]=gen();
+        d_x[2*i+1]=0;
     }
 }
 
-void fillA(arma::Mat<value_type> &A,int N,boost::mt19937 &rng,int caso,value_type prob_0)
+void fillA(state_type &d_A,int N,boost::mt19937 &rng)
 {
 
     boost::uniform_real<> unif( 0, 1 );//la distribucion de probabilidad uniforme entre cero y 2pi
     boost::variate_generator< boost::mt19937&, boost::uniform_real<> > gen( rng , unif );//gen es una funcion que toma el engine y la distribucion y devuelve el numero random
-    if (caso==0)
+    for (int i = 0; i < N; ++i)
     {
-    	FILE *w= fopen("Ai.txt", "w");
-    	for (int i = 0; i < N; ++i)
-		{
-			for (int j = 0; j <= i; ++j)
-			{
-				if(gen()>=prob_0)
-				{
-					fprintf(w, "%f  ",1.0);
-				}
-				else
-				{
-					fprintf(w, "%f  ",0.0);
-				}
-
-			}
-		}
-		fclose(w);
-		FILE *r= fopen("Ai.txt", "r");
-    	for (int i = 0; i < N; ++i)
-		{
-			for (int j = 0; j <= i; ++j)
-			{
-				fscanf(r,"%lf",&A(i,j));
-			}
-		}
-		fclose(r);
-    	for (int i = 0; i < N; ++i)
-		{
-			for (int j = N-1; j > i; --j)
-			{
-				A(i,j)=A(j,i);
-			}
-		}
-    }
-    if(caso==1)
-    {
-    	FILE *r= fopen("Ai.txt", "r");
-    	for (int i = 0; i < N; ++i)
-		{
-			for (int j = 0; j <= i; ++j)
-			{
-				fscanf(r,"%lf",&A(i,j));
-			}
-		}		
-		fclose(r);
-    	for (int i = 0; i < N; ++i)
-		{
-			for (int j = N-1; j > i; --j)
-			{
-				A(i,j)=A(j,i);
-			}
-		}
+        for (int j = 0; j < N; ++j)
+        {
+            d_A[i+N*j]=1.0;
+        }
     }
 }
 
-void fillG(std::vector<value_type> &G,int N,boost::mt19937 &rng,int caso)
+void fillG(state_type &d_G,int N,boost::mt19937 &rng)
 {
 
     boost::normal_distribution<> unif(2.5, 0.2 );//la distribucion de probabilidad uniforme entre cero y 2pi
     boost::variate_generator< boost::mt19937&, boost::normal_distribution<> > gen( rng , unif );//gen es una funcion que toma el engine y la distribucion y devuelve el numero random
-
-    if(caso==0)
+    for (int i = 0; i < N; ++i)
     {
-    	FILE *w= fopen("Gi.txt", "w");
-		for (int i = 0; i < N; ++i)
-		{
-			fprintf(w, "%lf  ", gen());
-		}
-		fclose(w);
-		FILE *r= fopen("Gi.txt", "r");
-		for (int i = 0; i < N; ++i)
-		{
-			fscanf(r, "%lf", &G[i]);
-		}
-		fclose(r);
-	}
-	if(caso==1)
-	{
-		FILE *r= fopen("Gi.txt", "r");
-		for (int i = 0; i < N; ++i)
-		{
-			fscanf(r, "%lf", &G[i]);
-		}
-		fclose(r);
-	}
+        d_G[i]=gen();
+    }
 }
 
-void fillI(std::vector<value_type> &I,int N,boost::mt19937 &rng,int caso)
+void fillI(state_type &d_I,int N,boost::mt19937 &rng)
 {
-    if (caso==0)
+    for (int i = 0; i < N; ++i)
     {
-    	FILE *w= fopen("Ii.txt", "w");
-		for (int i = 0; i < N; ++i)
-		{
-			fprintf(w, "%lf  ", 1.0);
-		}
-		fclose(w);
-		FILE *r= fopen("Ii.txt", "r");
-		for (int i = 0; i < N; ++i)
-		{
-			fscanf(r, "%lf", &I[i]);
-		}
-		fclose(r);
+        d_I[i]=1.0;
     }
-    if(caso==1)
-    {
-		FILE *r= fopen("Ii.txt", "r");
-		for (int i = 0; i < N; ++i)
-		{
-			fscanf(r, "%lf", &I[i]);
-		}
-		fclose(r);
-    }
-
 }
 
-void fillW(std::vector<value_type> &Fw,int N,boost::mt19937 &rng,int caso)
+void fillW(state_type &d_w,int N,boost::mt19937 &rng)
 {
     boost::uniform_real<> unif( 0, 10 );//la distribucion de probabilidad uniforme entre cero y 2pi
     boost::variate_generator< boost::mt19937&, boost::uniform_real<> > gen( rng , unif );//gen es una funcion que toma el engine y la distribucion y devuelve el numero random
 
-    if(caso==0)
+    for (int i = 0; i < N; ++i)
     {
-    	FILE *w= fopen("Wi.txt", "w");
-    	for (int i = 0; i < N; ++i)
-		{
-			fprintf(w, "%lf  ", 1.0);
-		}
-		fclose(w);
-		FILE *r= fopen("Wi.txt", "r");
-    	for (int i = 0; i < N; ++i)
-		{
-			fscanf(r, "%lf", &Fw[i]);
-		}
-		fclose(r);
-    }
-    if(caso==1)
-    {
-		FILE *r= fopen("Wi.txt", "r");
-    	for (int i = 0; i < N; ++i)
-		{
-			fscanf(r, "%lf", &Fw[i]);
-		}
-		fclose(r);
+        d_w[i]=1.0;
     }
 }
 
-void fillFw(std::vector<value_type> &Fw,int N,boost::mt19937 &rng,int caso)
+void fillFw(state_type &d_Fw,int N,boost::mt19937 &rng)
 {
     boost::uniform_real<> unif( 0, 10 );//la distribucion de probabilidad uniforme entre cero y 2pi
     boost::variate_generator< boost::mt19937&, boost::uniform_real<> > gen( rng , unif );//gen es una funcion que toma el engine y la distribucion y devuelve el numero random
 
-    if(caso==0)
+    for (int i = 0; i < N; ++i)
     {
-    	FILE *w= fopen("Fwi.txt", "w");
-    	for (int i = 0; i < N; ++i)
-		{
-			if(i==0)
-			{
-				fprintf(w, "%lf  ", 10.0);
-			}
-			else
-			{
-				fprintf(w, "%lf  ", 0.0);
-			}
-			
-		}
-		fclose(w);
-		FILE *r= fopen("Fwi.txt", "r");
-    	for (int i = 0; i < N; ++i)
-		{
-			fscanf(r, "%lf", &Fw[i]);
-		}
-		fclose(r);
-    }
-    if(caso==1)
-    {
-		FILE *r= fopen("Fwi.txt", "r");
-    	for (int i = 0; i < N; ++i)
-		{
-			fscanf(r, "%lf", &Fw[i]);
-		}
-		fclose(r);
+        d_Fw[i]=1.0;
     }
 }
 
@@ -572,9 +412,11 @@ int main()
     printf("N: ");
     std::cin >>N;
     
+    /*
     int load;
     printf("Load CI (0 NO, 1 YES): ");
     std::cin >>load;
+    */
 
     value_type Total_time;
     printf("Total_time : ");
@@ -585,13 +427,6 @@ int main()
     std::cin >>dt;
 
 
-
-
-    arma::Mat<value_type> A(N,N);
-    std::vector<value_type> I(N);
-    std::vector<value_type> G(N);
-    std::vector<value_type> F(N);
-    std::vector<value_type> Fw(N);
 	thrust::host_vector<value_type> x(2*N); //condiciones iniciales
 
     int loops=number_of_loops(Total_time,N,dt);
@@ -601,31 +436,23 @@ int main()
 
 
 //////////////////////////////////////////////////////////////////////////
-	fillA(A,N,rng,load,0);
-	fillG(G,N,rng,load);
-	fillI(I,N,rng,load);
-	fillFw(F,N,rng,load);
-	fillW(Fw,N,rng,load);
-	inicialcond(x,N,rng,load); ///
 
-	thrust::host_vector< value_type > h_A(N*N);
-	pasteA(A,h_A,N);
-	thrust::host_vector< value_type > h_G(N);
-	paste(G,h_G,N);
-	thrust::host_vector< value_type > h_I(N);
-	paste(I,h_I,N);
-	thrust::host_vector< value_type > h_Fw(N);
-	paste(Fw,h_Fw,N);
-	thrust::host_vector< value_type > h_F(N);
-	paste(F,h_F,N);
 
-	state_type d_A=h_A;
-	state_type d_G=h_G;
-	state_type d_I=h_I;
-	state_type d_Fw=h_Fw;
-	state_type d_F=h_F;
 
-	state_type d_x=x;
+
+	state_type d_A(N*N);
+    fillA(d_A,N,rng);
+	state_type d_G(N);
+    fillG(d_G,N,rng);
+	state_type d_I(N);
+    fillI(d_I,N,rng);
+	state_type d_F(N);
+    fillFw(d_F,N,rng);
+	state_type d_Fw(N);
+    fillW(d_Fw,N,rng);
+
+	state_type d_x(2*N);
+    inicialcond(d_x,N,rng); ///
 ////////////////////////////////////////////////////////////////////////////
 
     int steps_estim=(int)(Total_time/(dt*loops));
