@@ -278,13 +278,15 @@ void fillA(state_type &d_A,int N,boost::mt19937 &rng)
 
     boost::uniform_real<> unif( 0, 1 );//la distribucion de probabilidad uniforme entre cero y 2pi
     boost::variate_generator< boost::mt19937&, boost::uniform_real<> > gen( rng , unif );//gen es una funcion que toma el engine y la distribucion y devuelve el numero random
+    thrust::host_vector<value_type> h_A(N*N);
     for (int i = 0; i < N; ++i)
     {
         for (int j = 0; j < N; ++j)
         {
-            d_A[i+N*j]=1.0;
+            h_A[i+N*j]=1.0;
         }
     }
+    d_A=h_A;
 }
 
 void fillG(state_type &d_G,int N,boost::mt19937 &rng)
