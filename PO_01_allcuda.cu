@@ -294,40 +294,46 @@ void fillG(state_type &d_G,int N,boost::mt19937 &rng)
 
     boost::normal_distribution<> unif(2.5, 0.2 );//la distribucion de probabilidad uniforme entre cero y 2pi
     boost::variate_generator< boost::mt19937&, boost::normal_distribution<> > gen( rng , unif );//gen es una funcion que toma el engine y la distribucion y devuelve el numero random
+    thrust::host_vector<value_type> h_G(N);
     for (int i = 0; i < N; ++i)
     {
-        d_G[i]=gen();
+        h_G[i]=gen();
     }
+    d_G=h_G;
 }
 
 void fillI(state_type &d_I,int N,boost::mt19937 &rng)
 {
+    thrust::host_vector<value_type> h_I(N);
     for (int i = 0; i < N; ++i)
     {
-        d_I[i]=1.0;
+        h_I[i]=1.0;
     }
+    d_I=h_I;
 }
 
 void fillW(state_type &d_w,int N,boost::mt19937 &rng)
 {
     boost::uniform_real<> unif( 0, 10 );//la distribucion de probabilidad uniforme entre cero y 2pi
     boost::variate_generator< boost::mt19937&, boost::uniform_real<> > gen( rng , unif );//gen es una funcion que toma el engine y la distribucion y devuelve el numero random
-
+    thrust::host_vector<value_type> h_w(N);
     for (int i = 0; i < N; ++i)
     {
-        d_w[i]=1.0;
+        h_w[i]=1.0;
     }
+    d_w=h_w;
 }
 
 void fillFw(state_type &d_Fw,int N,boost::mt19937 &rng)
 {
     boost::uniform_real<> unif( 0, 10 );//la distribucion de probabilidad uniforme entre cero y 2pi
     boost::variate_generator< boost::mt19937&, boost::uniform_real<> > gen( rng , unif );//gen es una funcion que toma el engine y la distribucion y devuelve el numero random
-
+    thrust::host_vector<value_type> h_Fw(N);
     for (int i = 0; i < N; ++i)
     {
-        d_Fw[i]=1.0;
+        h_Fw[i]=1.0;
     }
+    d_Fw=h_Fw;
 }
 
 void printsave(size_t steps, thrust::host_vector<value_type> &x_vec,std::vector<value_type> &times,int N,int i, int loops) //1 tiempo. 2 posicion. 3 momento. 4 energia potencial. 5 energia cinetica. 6 energia. 7 energia Total
@@ -349,33 +355,14 @@ void printsave(size_t steps, thrust::host_vector<value_type> &x_vec,std::vector<
 		{
 			printf("printing savestate: %d \n", (int)(100.0*i/steps));
 		}
-		fprintf(f1,"%.15lf  ",times[i] );
+		fprintf(f1,"%f  ",times[i] );
 		for (int j = 0; j < N; ++j)
 		{
-			fprintf(f1,"%.15lf	  %.15lf   ",x_vec[2*N*i+2*j],x_vec[2*N*i+2*j+1]); //1 posicion. 2 momento. 3 energia potencial. 4 energia cinetica. 5 energia total
+			fprintf(f1,"%f	  %f  ",x_vec[2*N*i+2*j],x_vec[2*N*i+2*j+1]); //1 posicion. 2 momento. 3 energia potencial. 4 energia cinetica. 5 energia total
 		}
 		fprintf(f1,"\n");
 	}
 	fclose(f1);
-}
-
-void pasteA(arma::Mat<value_type> &A,thrust::host_vector< value_type > &h_A,int N)
-{
-	for (int i = 0; i < N; ++i)
-	{
-		for (int j = 0; j < N; ++j)
-		{
-			h_A[i+N*j]=A(i,j);
-		}
-	}
-}
-
-void paste(std::vector<value_type> &G,thrust::host_vector< value_type > &h_G,int N)
-{
-	for (int i = 0; i < N; ++i)
-	{
-		h_G[i]=G[i];
-	}
 }
 
 int number_of_loops(value_type Total_time, int N, value_type dt)
