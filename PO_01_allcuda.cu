@@ -593,7 +593,7 @@ int main()
 	thrust::host_vector<value_type> x(2*N); //condiciones iniciales
 
     int loops=number_of_loops(Total_time,N,dt);
-    loops=2;
+    //loops=2;
     printf("%d\n",loops );
 
 
