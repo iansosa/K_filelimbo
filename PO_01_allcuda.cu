@@ -541,6 +541,7 @@ int number_of_loops(value_type Total_time, int N, value_type dt)
     int GB_inMemory=3.5;
 
     size_t total_bytes=(size_t)((sizeof(value_type)*Total_time*2*N/dt));
+    printf("Total_GB_tiempo: %lf\n",total_bytes/(1024*1024*1024));
     return(1+(int)(total_bytes/(GB_inMemory*pow(1024,3)-sizeof(value_type)*(6*N+N*N))));
 }
 
