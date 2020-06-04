@@ -129,6 +129,17 @@ struct mean_field_calculator
     }
 };
 
+
+struct Normaliza // normaliza por N
+{
+    float Norm;
+    Normaliza(float suma){Norm=suma;};
+    __device__ float operator()(float a)
+    {
+        return a/Norm;
+    }
+};
+
 struct mean_force_calculator
 {
     struct mean_force_functor : public thrust::unary_function< value_type , value_type >
@@ -147,6 +158,8 @@ struct mean_force_calculator
         	{
         		return sum;
         	}
+
+            //sum=thrust::reduce(m_A,m_A+m_N,1);
         	for (int i = 0; i < m_N; ++i)
         	{
         		sum=sum+m_A[j*m_N+i]*sin(m_xvec[2*i]- m_xvec[2*j]);
@@ -155,12 +168,35 @@ struct mean_force_calculator
         }
     };
 
+    struct PartialSum : public thrust::unary_function< value_type , value_type >
+    {
+        const value_type *m_A;
+        const value_type *m_xvec;
+        const int m_N;
+        const int m_first;
+
+        PartialSum(const value_type *A,const value_type *xvec,const int N,const int first)
+        : m_A(A), m_xvec(xvec), m_N(N), m_first(first) { }
+
+        __host__ __device__
+        value_type operator ()(const int second)
+        {
+            return m_A[m_first*m_N+second]*sin(m_xvec[2*second]- m_xvec[2*m_first]);
+        }   
+    };
 
     static state_type get_mean_force( const state_type &x, const state_type &A,const int N)
     {
     	state_type ret(2*N);
+        thrust::host_vector<value_type> aux(2*N);
 
-        thrust::transform(thrust::make_counting_iterator(0),thrust::make_counting_iterator(2*N-1),ret.begin(),mean_force_functor(thrust::raw_pointer_cast(A.data()),thrust::raw_pointer_cast(x.data()),N));
+        for (int i = 0; i < N; ++i)
+        {
+            aux[i]=thrust::transform_reduce(thrust::make_counting_iterator(0), thrust::make_counting_iterator(N-1),/*thrust::make_constant_iterator(i),*//*mean_force_functor(thrust::raw_pointer_cast(A.data()),thrust::raw_pointer_cast(x.data()),N)*/PartialSum(thrust::raw_pointer_cast(A.data()),thrust::raw_pointer_cast(x.data()),N,i),0.0,thrust::plus<float>());
+        }
+        ret=aux;
+        thrust::transform(ret.begin(), ret.end(), ret.begin(),Normaliza(N));
+        //thrust::transform(thrust::make_counting_iterator(0),thrust::make_counting_iterator(2*N-1),ret.begin(),mean_force_functor(thrust::raw_pointer_cast(A.data()),thrust::raw_pointer_cast(x.data()),N));
 
         return ret;
     }
