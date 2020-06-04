@@ -9,7 +9,7 @@
 #include <armadillo>
 #include <utility>
 #include <omp.h>
-
+#include "gpu_timer.h"
 #include <boost/numeric/odeint.hpp>
 
 
@@ -367,12 +367,17 @@ void printsave(size_t steps, thrust::host_vector<value_type> &x_vec,std::vector<
 
 int number_of_loops(value_type Total_time, int N, value_type dt)
 {
-    int GB_inMemory=3.5;
+    int GB_inMemory=3;
 
     size_t total_bytes=(size_t)((sizeof(value_type)*Total_time*2*N/dt));
     printf("Total_GB_tiempo: %lf\n",(value_type)total_bytes/(1024*1024*1024));
-    printf("Total_GB_head: %lf\n",(value_type)sizeof(value_type)*(6*N+N*N)/(1024*1024*1024));
-    return(1+(int)(total_bytes/(GB_inMemory*pow(1024,3)-sizeof(value_type)*(6*N+N*N))));
+    printf("Total_GB_head: %lf\n",(value_type)sizeof(value_type)*(8*N+N*N)/(1024*1024*1024));
+    if(GB_inMemory<(value_type)sizeof(value_type)*(8*N+N*N)/(1024*1024*1024))
+    {
+        printf("Not enough VRAM\n");
+        return -1;
+    }
+    return(1+(int)(total_bytes/(GB_inMemory*pow(1024,3)-sizeof(value_type)*(8*N+N*N))));
 }
 
 void integrate(int N,state_type &x_vec,value_type dt,state_type &d_x,phase_oscillators &sys,value_type start_time,value_type end_time,thrust::host_vector<value_type> &x_vec_host,int i, int loops)
@@ -419,8 +424,12 @@ int main()
 	thrust::host_vector<value_type> x(2*N); //condiciones iniciales
 
     int loops=number_of_loops(Total_time,N,dt);
+    if(loops==-1)
+    {
+        return 0;
+    }
     //loops=2;
-    printf("%d\n",loops );
+    printf("Loops: %d\n",loops );
 
 
 
@@ -428,6 +437,8 @@ int main()
 
 
 
+    gpu_timer reloj;
+    reloj.tic();
 
 	state_type d_A(N*N);
     fillA(d_A,N,rng);
@@ -467,7 +478,7 @@ int main()
 	system("cat ac_1.txt ac_2.txt ac_3.txt ac_4.txt> ac.txt");
 	system("rm -f {ac_1,ac_2,ac_3,ac_4}.txt");
 	system("rm -f {save_1,save_2,save_3,save_4}.txt");*/
-	printf("N=%d\n",N);
+	printf("N=%d\nTiempo: %lfms\n",N,reloj.tac());
 
 	return 0;
 }
