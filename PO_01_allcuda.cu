@@ -158,7 +158,7 @@ struct mean_force_calculator
 
     static state_type get_mean_force( const state_type &x, const state_type &A,const int N)
     {
-    	state_type ret(N);
+    	state_type ret(2*N);
 
         thrust::transform(thrust::make_counting_iterator(0),thrust::make_counting_iterator(2*N-1),ret.begin(),mean_force_functor(thrust::raw_pointer_cast(A.data()),thrust::raw_pointer_cast(x.data()),N));
 
