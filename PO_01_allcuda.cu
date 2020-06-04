@@ -192,7 +192,7 @@ struct mean_force_calculator
 
         for (int i = 0; i < N; ++i)
         {
-            aux[i]=thrust::transform_reduce(thrust::make_counting_iterator(0), thrust::make_counting_iterator(N-1),/*thrust::make_constant_iterator(i),*//*mean_force_functor(thrust::raw_pointer_cast(A.data()),thrust::raw_pointer_cast(x.data()),N)*/PartialSum(thrust::raw_pointer_cast(A.data()),thrust::raw_pointer_cast(x.data()),N,i),0.0,thrust::plus<float>());
+            aux[i]=thrust::transform_reduce(thrust::make_counting_iterator(0), thrust::make_counting_iterator(N-1),PartialSum(thrust::raw_pointer_cast(A.data()),thrust::raw_pointer_cast(x.data()),N,i),0.0,thrust::plus<float>());
         }
         ret=aux;
         thrust::transform(ret.begin(), ret.end(), ret.begin(),Normaliza(N));
@@ -227,14 +227,15 @@ public:
         void operator()( Tuple t )
         {
             //int current_oscnum;
-            if(thrust::get<1>(t)%2==0)
+            thrust::get<2>(t) =m_x[thrust::get<1>(t)+1]+ (thrust::get<1>(t)%2)*(m_magic[(thrust::get<1>(t)-1)/2]/mm_I[(thrust::get<1>(t)-1)/2]+mm_F[(thrust::get<1>(t)-1)/2]*sin(mm_Fw[(thrust::get<1>(t)-1)/2]*m_t-m_x[2*(thrust::get<1>(t)-1)/2])/mm_I[(thrust::get<1>(t)-1)/2]-(mm_G[(thrust::get<1>(t)-1)/2]/mm_I[(thrust::get<1>(t)-1)/2])*m_x[thrust::get<1>(t)]-m_x[thrust::get<1>(t)+1]);
+           /* if(thrust::get<1>(t)%2==0)
             {
                 thrust::get<2>(t)= m_x[thrust::get<1>(t)+1];
             }
             else
             {
                 thrust::get<2>(t) = m_magic[(thrust::get<1>(t)-1)/2]/mm_I[(thrust::get<1>(t)-1)/2]+mm_F[(thrust::get<1>(t)-1)/2]*sin(mm_Fw[(thrust::get<1>(t)-1)/2]*m_t-m_x[2*(thrust::get<1>(t)-1)/2])/mm_I[(thrust::get<1>(t)-1)/2]-(mm_G[(thrust::get<1>(t)-1)/2]/mm_I[(thrust::get<1>(t)-1)/2])*m_x[thrust::get<1>(t)];
-            }
+            }*/
         }
     };
 
@@ -365,9 +366,10 @@ void fillFw(state_type &d_Fw,int N,boost::mt19937 &rng)
     boost::uniform_real<> unif( 0, 10 );//la distribucion de probabilidad uniforme entre cero y 2pi
     boost::variate_generator< boost::mt19937&, boost::uniform_real<> > gen( rng , unif );//gen es una funcion que toma el engine y la distribucion y devuelve el numero random
     thrust::host_vector<value_type> h_Fw(N);
-    for (int i = 0; i < N; ++i)
+    h_Fw[0]=100;
+    for (int i = 1; i < N; ++i)
     {
-        h_Fw[i]=1.0;
+        h_Fw[i]=0;
     }
     d_Fw=h_Fw;
 }
