@@ -22,13 +22,15 @@
 #include <thrust/device_vector.h>
 #include <thrust/reduce.h>
 #include <thrust/functional.h>
+#include <thrust/iterator/transform_iterator.h>
 #include <thrust/iterator/permutation_iterator.h>
 #include <thrust/iterator/counting_iterator.h>
+#include <thrust/iterator/discard_iterator.h>
 
 using namespace std;
 
 using namespace boost::numeric::odeint;
-
+using namespace thrust::placeholders;
 typedef double value_type;
 
 
@@ -154,17 +156,29 @@ struct mean_force_calculator
         value_type operator()(int j) const
         {
         	value_type sum=0;
-        	if(j>=m_N)
-        	{
-        		return sum;
-        	}
-
             //sum=thrust::reduce(m_A,m_A+m_N,1);
         	for (int i = 0; i < m_N; ++i)
         	{
         		sum=sum+m_A[j*m_N+i]*sin(m_xvec[2*i]- m_xvec[2*j]);
         	}
             return sum/m_N;
+        }
+    };
+
+    struct getkey : public thrust::unary_function< int , value_type >
+    {
+        const value_type *m_A;
+        const value_type *m_xvec;
+        int m_N;
+        getkey(const value_type *A,const value_type *xvec,const int N)
+        : m_A(A), m_xvec(xvec), m_N(N) { }
+
+        __host__ __device__
+        value_type operator()(int i) const
+        {
+            int m_first_i=i/m_N;
+            int m_second_i=i%m_N;
+            return m_A[i]*sin(m_xvec[2*m_second_i]- m_xvec[2*m_first_i])/m_N;
         }
     };
 
@@ -185,19 +199,43 @@ struct mean_force_calculator
         }   
     };
 
+    struct PartialSum2 
+    {
+        const value_type *m_A;
+        const value_type *m_xvec;
+        const int m_N;
+
+        PartialSum2(const value_type *A,const value_type *xvec,const int N)
+        : m_A(A), m_xvec(xvec), m_N(N){ }
+
+        __host__ __device__
+        value_type operator ()(const int i,const int j)
+        {
+            int m_first_i=i/m_N;
+            int m_second_i=i%m_N;
+            int m_first_j=j/m_N;
+            int m_second_j=j%m_N;
+            //printf("i=%d m_first_i=%d m_second_i=%d, j=%d m_first_j=%d m_second_j=%d: %.15lf\n",i,m_first_i,m_second_i,j,m_first_j,m_second_j,m_A[i]*sin(m_xvec[2*m_second_i]- m_xvec[2*m_first_i])+m_A[j]*sin(m_xvec[2*m_second_j]- m_xvec[2*m_first_j]));
+            return m_A[i]*sin(m_xvec[2*m_second_i]- m_xvec[2*m_first_i])+m_A[j]*sin(m_xvec[2*m_second_j]- m_xvec[2*m_first_j]);
+        }   
+    };
+
     static state_type get_mean_force( const state_type &x, const state_type &A,const int N)
     {
-    	state_type ret(2*N);
-        thrust::host_vector<value_type> aux(2*N);
+    	state_type ret(N);
+        thrust::device_vector< int > aux_keys(N*N);
 
+
+        thrust::reduce_by_key(thrust::make_transform_iterator(thrust::counting_iterator<int>(0), _1/N), thrust::make_transform_iterator(thrust::counting_iterator<int>(N*N-1), _1/N), thrust::make_transform_iterator(thrust::counting_iterator<int>(0), getkey(thrust::raw_pointer_cast(A.data()),thrust::raw_pointer_cast(x.data()),N)), aux_keys.begin(), ret.begin()/*,PartialSum2(thrust::raw_pointer_cast(A.data()),thrust::raw_pointer_cast(x.data()),N)*/);
+       //thrust::transform(ret.begin(),ret.end(),ret.begin(),_1/N);
+        //thrust::transform(thrust::make_counting_iterator(0),thrust::make_counting_iterator(N-1),ret.begin(),mean_force_functor(thrust::raw_pointer_cast(A.data()),thrust::raw_pointer_cast(x.data()),N));
+        
+       /* thrust::host_vector< value_type > h_ret(N);
+        thrust::copy(ret.begin(),ret.end(),h_ret.begin());
         for (int i = 0; i < N; ++i)
         {
-            aux[i]=thrust::transform_reduce(thrust::make_counting_iterator(0), thrust::make_counting_iterator(N-1),PartialSum(thrust::raw_pointer_cast(A.data()),thrust::raw_pointer_cast(x.data()),N,i),0.0,thrust::plus<float>());
-        }
-        ret=aux;
-        thrust::transform(ret.begin(), ret.end(), ret.begin(),Normaliza(N));
-        //thrust::transform(thrust::make_counting_iterator(0),thrust::make_counting_iterator(2*N-1),ret.begin(),mean_force_functor(thrust::raw_pointer_cast(A.data()),thrust::raw_pointer_cast(x.data()),N));
-
+            printf("%d   %lf\n",i,h_ret[i]);
+        }*/
         return ret;
     }
 };
@@ -227,15 +265,15 @@ public:
         void operator()( Tuple t )
         {
             //int current_oscnum;
-            thrust::get<2>(t) =m_x[thrust::get<1>(t)+1]+ (thrust::get<1>(t)%2)*(m_magic[(thrust::get<1>(t)-1)/2]/mm_I[(thrust::get<1>(t)-1)/2]+mm_F[(thrust::get<1>(t)-1)/2]*sin(mm_Fw[(thrust::get<1>(t)-1)/2]*m_t-m_x[2*(thrust::get<1>(t)-1)/2])/mm_I[(thrust::get<1>(t)-1)/2]-(mm_G[(thrust::get<1>(t)-1)/2]/mm_I[(thrust::get<1>(t)-1)/2])*m_x[thrust::get<1>(t)]-m_x[thrust::get<1>(t)+1]);
-           /* if(thrust::get<1>(t)%2==0)
+            //thrust::get<2>(t) =m_x[thrust::get<1>(t)+1]+ (thrust::get<1>(t)%2)*(m_magic[(thrust::get<1>(t)-1)/2]/mm_I[(thrust::get<1>(t)-1)/2]+mm_F[(thrust::get<1>(t)-1)/2]*sin(mm_Fw[(thrust::get<1>(t)-1)/2]*m_t-m_x[2*(thrust::get<1>(t)-1)/2])/mm_I[(thrust::get<1>(t)-1)/2]-(mm_G[(thrust::get<1>(t)-1)/2]/mm_I[(thrust::get<1>(t)-1)/2])*m_x[thrust::get<1>(t)]-m_x[thrust::get<1>(t)+1]);
+            if(thrust::get<1>(t)%2==0)
             {
                 thrust::get<2>(t)= m_x[thrust::get<1>(t)+1];
             }
             else
             {
                 thrust::get<2>(t) = m_magic[(thrust::get<1>(t)-1)/2]/mm_I[(thrust::get<1>(t)-1)/2]+mm_F[(thrust::get<1>(t)-1)/2]*sin(mm_Fw[(thrust::get<1>(t)-1)/2]*m_t-m_x[2*(thrust::get<1>(t)-1)/2])/mm_I[(thrust::get<1>(t)-1)/2]-(mm_G[(thrust::get<1>(t)-1)/2]/mm_I[(thrust::get<1>(t)-1)/2])*m_x[thrust::get<1>(t)];
-            }*/
+            }
         }
     };
 
@@ -305,7 +343,8 @@ void inicialcond(state_type &d_x,int N,boost::mt19937 &rng)
    
     for (int i = 0; i < N; ++i)
     {
-        d_x[2*i]=gen();
+        d_x[2*i]=0;
+        //d_x[2*i]=gen();
         d_x[2*i+1]=0;
     }
 }
@@ -334,7 +373,8 @@ void fillG(state_type &d_G,int N,boost::mt19937 &rng)
     thrust::host_vector<value_type> h_G(N);
     for (int i = 0; i < N; ++i)
     {
-        h_G[i]=gen();
+        h_G[i]=2.5;
+        //h_G[i]=gen();
     }
     d_G=h_G;
 }
