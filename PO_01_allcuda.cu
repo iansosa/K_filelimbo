@@ -31,7 +31,7 @@ using namespace std;
 
 using namespace boost::numeric::odeint;
 using namespace thrust::placeholders;
-typedef double value_type;
+typedef float value_type;
 
 
 typedef thrust::device_vector< value_type > state_type;
@@ -445,7 +445,7 @@ void printsave(size_t steps, thrust::host_vector<value_type> &x_vec,std::vector<
 
 int number_of_loops(value_type Total_time, int N, value_type dt)
 {
-    int GB_inMemory=3;
+    int GB_inMemory=5;
 
     size_t total_bytes=(size_t)((sizeof(value_type)*Total_time*2*N/dt));
     printf("Total_GB_tiempo: %lf\n",(value_type)total_bytes/(1024*1024*1024));
