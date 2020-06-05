@@ -132,16 +132,6 @@ struct mean_field_calculator
 };
 
 
-struct Normaliza // normaliza por N
-{
-    float Norm;
-    Normaliza(float suma){Norm=suma;};
-    __device__ float operator()(float a)
-    {
-        return a/Norm;
-    }
-};
-
 struct mean_force_calculator
 {
     struct mean_force_functor : public thrust::unary_function< value_type , value_type >
@@ -156,7 +146,6 @@ struct mean_force_calculator
         value_type operator()(int j) const
         {
         	value_type sum=0;
-            //sum=thrust::reduce(m_A,m_A+m_N,1);
         	for (int i = 0; i < m_N; ++i)
         	{
         		sum=sum+m_A[j*m_N+i]*sin(m_xvec[2*i]- m_xvec[2*j]);
@@ -220,17 +209,15 @@ struct mean_force_calculator
         }   
     };
 
-    static state_type get_mean_force( const state_type &x, const state_type &A,const int N)
+    static state_type get_mean_force( const state_type &x, const state_type &A,const int N/*, state_type &sum_placeholder*/)
     {
     	state_type ret(N);
-        thrust::device_vector< int > aux_keys(N*N);
+        thrust::reduce_by_key(thrust::make_transform_iterator(thrust::counting_iterator<int>(0), _1/N), thrust::make_transform_iterator(thrust::counting_iterator<int>(N*N-1), _1/N), thrust::make_transform_iterator(thrust::counting_iterator<int>(0), getkey(thrust::raw_pointer_cast(A.data()),thrust::raw_pointer_cast(x.data()),N)), thrust::make_discard_iterator(), ret.begin()/*sum_placeholder.begin()*/);
 
-
-        thrust::reduce_by_key(thrust::make_transform_iterator(thrust::counting_iterator<int>(0), _1/N), thrust::make_transform_iterator(thrust::counting_iterator<int>(N*N-1), _1/N), thrust::make_transform_iterator(thrust::counting_iterator<int>(0), getkey(thrust::raw_pointer_cast(A.data()),thrust::raw_pointer_cast(x.data()),N)), aux_keys.begin(), ret.begin()/*,PartialSum2(thrust::raw_pointer_cast(A.data()),thrust::raw_pointer_cast(x.data()),N)*/);
-       //thrust::transform(ret.begin(),ret.end(),ret.begin(),_1/N);
+        //std::pair< value_type , value_type > median=mean_field_calculator::get_mean(x);
         //thrust::transform(thrust::make_counting_iterator(0),thrust::make_counting_iterator(N-1),ret.begin(),mean_force_functor(thrust::raw_pointer_cast(A.data()),thrust::raw_pointer_cast(x.data()),N));
         
-       /* thrust::host_vector< value_type > h_ret(N);
+        /*thrust::host_vector< value_type > h_ret(N);
         thrust::copy(ret.begin(),ret.end(),h_ret.begin());
         for (int i = 0; i < N; ++i)
         {
@@ -257,7 +244,7 @@ public:
         const value_type *mm_Fw;
         value_type *m_magic;
 
-        sys_functor(const value_type *x ,const  value_type t,const value_type *m_G,const value_type *m_I,const value_type *m_F,const value_type *m_Fw,value_type *magic)
+        sys_functor(const value_type *x ,const  value_type t,const value_type *m_G,const value_type *m_I,const value_type *m_F,const value_type *m_Fw, value_type *magic)
         : m_x( x ),m_t(t),mm_G(m_G),mm_I(m_I),mm_F(m_F),mm_Fw(m_Fw),m_magic(magic) { }
 
         template< class Tuple >
@@ -265,27 +252,30 @@ public:
         void operator()( Tuple t )
         {
             //int current_oscnum;
-            //thrust::get<2>(t) =m_x[thrust::get<1>(t)+1]+ (thrust::get<1>(t)%2)*(m_magic[(thrust::get<1>(t)-1)/2]/mm_I[(thrust::get<1>(t)-1)/2]+mm_F[(thrust::get<1>(t)-1)/2]*sin(mm_Fw[(thrust::get<1>(t)-1)/2]*m_t-m_x[2*(thrust::get<1>(t)-1)/2])/mm_I[(thrust::get<1>(t)-1)/2]-(mm_G[(thrust::get<1>(t)-1)/2]/mm_I[(thrust::get<1>(t)-1)/2])*m_x[thrust::get<1>(t)]-m_x[thrust::get<1>(t)+1]);
+            //int caso=(thrust::get<1>(t)%2);
+            //thrust::get<2>(t) =m_x[thrust::get<1>(t)+1-caso]+ caso*(m_magic[(thrust::get<1>(t)-1)/2]/mm_I[(thrust::get<1>(t)-1)/2]+mm_F[(thrust::get<1>(t)-1)/2]*sin(mm_Fw[(thrust::get<1>(t)-1)/2]*m_t-m_x[2*(thrust::get<1>(t)-1)/2])/mm_I[(thrust::get<1>(t)-1)/2]-(mm_G[(thrust::get<1>(t)-1)/2]/mm_I[(thrust::get<1>(t)-1)/2])*m_x[thrust::get<1>(t)]-m_x[thrust::get<1>(t)+1-caso]);
             if(thrust::get<1>(t)%2==0)
             {
                 thrust::get<2>(t)= m_x[thrust::get<1>(t)+1];
             }
             else
             {
-                thrust::get<2>(t) = m_magic[(thrust::get<1>(t)-1)/2]/mm_I[(thrust::get<1>(t)-1)/2]+mm_F[(thrust::get<1>(t)-1)/2]*sin(mm_Fw[(thrust::get<1>(t)-1)/2]*m_t-m_x[2*(thrust::get<1>(t)-1)/2])/mm_I[(thrust::get<1>(t)-1)/2]-(mm_G[(thrust::get<1>(t)-1)/2]/mm_I[(thrust::get<1>(t)-1)/2])*m_x[thrust::get<1>(t)];
+                int position=(thrust::get<1>(t)-1)/2;
+                thrust::get<2>(t) = m_magic[position]/mm_I[position]+mm_F[position]*sin(mm_Fw[position]*m_t-m_x[2*position])/mm_I[position]-(mm_G[position]/mm_I[position])*m_x[thrust::get<1>(t)];
             }
         }
     };
 
-    phase_oscillators( int N,const state_type &A,const value_type *G,const value_type *I,const value_type *Fw,const value_type *F )
-        : m_A( A ) ,m_G( G ) ,m_I( I ) ,m_F( F ) ,m_Fw( Fw ) , m_N( N ) 
+    phase_oscillators( int N,const state_type &A,const value_type *G,const value_type *I,const value_type *Fw,const value_type *F/*, state_type &sum_placeholder*/)
+        : m_A( A ) ,m_G( G ) ,m_I( I ) ,m_F( F ) ,m_Fw( Fw ) , m_N( N ) /*,m_sum_placeholder( sum_placeholder )*/
         {
 
         }
 
     void operator() ( const state_type &x , state_type &dxdt , const value_type t )
     {
-        state_type megicsum=mean_force_calculator::get_mean_force(x,m_A,m_N);
+        state_type ret=mean_force_calculator::get_mean_force(x,m_A,m_N/*,m_sum_placeholder*/);//1000 10 27000
+        //std::pair< value_type , value_type > median=mean_field_calculator::get_mean(x);
         if(ceilf(t)==t && (int) t%10==0)
         {
             printf("tiempo: %lf\n",t);
@@ -295,7 +285,7 @@ public:
         thrust::for_each(
                 thrust::make_zip_iterator( thrust::make_tuple( x.begin() , it1, dxdt.begin() ) ),
                 thrust::make_zip_iterator( thrust::make_tuple( x.end()   , it2, dxdt.end()   ) ) ,
-                sys_functor(thrust::raw_pointer_cast(x.data()),t,m_G,m_I,m_F,m_Fw,thrust::raw_pointer_cast(megicsum.data()))
+                sys_functor(thrust::raw_pointer_cast(x.data()),t,m_G,m_I,m_F,m_Fw,thrust::raw_pointer_cast(ret.data())/*thrust::raw_pointer_cast(m_sum_placeholder.data())*/)
                 );
 
     }
@@ -307,6 +297,7 @@ private:
     const value_type *m_I;
     const value_type *m_F;
     const value_type *m_Fw;
+    //state_type &m_sum_placeholder;
     const size_t m_N;
 };
 
@@ -324,10 +315,11 @@ struct push_back_state_and_time
     void operator()( const state_type &x , value_type t )
     {
         const value_type *input = thrust::raw_pointer_cast(x.data());
-        for (int i = 0; i < m_N*2; ++i)
+        thrust::copy(x.data(),x.data()+2*m_N,m_states.data()+m_current_it*2*m_N);
+        /*for (int i = 0; i < m_N*2; ++i)
         {
             m_states[m_current_it*2*m_N+i]=x[i];
-        }
+        }*/
         
         m_times.push_back( t );
         m_current_it=m_current_it+1;
@@ -414,7 +406,7 @@ void fillFw(state_type &d_Fw,int N,boost::mt19937 &rng)
     d_Fw=h_Fw;
 }
 
-void printsave(size_t steps, thrust::host_vector<value_type> &x_vec,std::vector<value_type> &times,int N,int i, int loops) //1 tiempo. 2 posicion. 3 momento. 4 energia potencial. 5 energia cinetica. 6 energia. 7 energia Total
+void printsave(size_t steps, thrust::host_vector<value_type> &x_vec,std::vector<value_type> &times,int N,int i) //1 tiempo. 2 posicion. 3 momento. 4 energia potencial. 5 energia cinetica. 6 energia. 7 energia Total
 {
 
 	FILE *f1;
@@ -452,25 +444,33 @@ int number_of_loops(value_type Total_time, int N, value_type dt)
     printf("Total_GB_head: %lf\n",(value_type)sizeof(value_type)*(8*N+N*N)/(1024*1024*1024));
     if(GB_inMemory<(value_type)sizeof(value_type)*(8*N+N*N)/(1024*1024*1024))
     {
-        printf("Not enough VRAM\n");
+        printf("Error: Not enough VRAM\n");
         return -1;
     }
     return(1+(int)(total_bytes/(GB_inMemory*pow(1024,3)-sizeof(value_type)*(8*N+N*N))));
 }
 
-void integrate(int N,state_type &x_vec,value_type dt,state_type &d_x,phase_oscillators &sys,value_type start_time,value_type end_time,thrust::host_vector<value_type> &x_vec_host,int i, int loops)
+void integrate(int N,state_type &x_vec,value_type dt,state_type &d_x,phase_oscillators &sys,value_type start_time,value_type end_time,thrust::host_vector<value_type> &x_vec_host,int i,int save)
 {
     runge_kutta4< state_type , value_type , state_type , value_type > stepper;
-    int current_it=0;
-    std::vector<value_type> times;
-    size_t steps=integrate_adaptive( stepper , sys , d_x , start_time , end_time , dt,push_back_state_and_time( x_vec , times,N,current_it ) );
-    thrust::copy(x_vec.begin(), x_vec.end(), x_vec_host.begin());
-    printsave(steps,x_vec_host,times,N,i,loops);
-    for (int j = 0; j < N; ++j)
+    size_t steps;
+    if(save==1)
+    {
+        int current_it=0;
+        std::vector<value_type> times;
+        steps=integrate_adaptive( stepper , sys , d_x , start_time , end_time , dt,push_back_state_and_time( x_vec , times,N,current_it ) );
+        thrust::copy(x_vec.begin(), x_vec.end(), x_vec_host.begin());
+        printsave(steps,x_vec_host,times,N,i);
+    }
+    else
+    {
+        steps=integrate_adaptive( stepper , sys , d_x , start_time , end_time , dt);
+    }
+    /*for (int j = 0; j < N; ++j)
     {
         d_x[2*j]=x_vec[2*N*(steps-1)+2*j];
         d_x[2*j+1]=x_vec[2*N*(steps-1)+2*j+1];
-    }
+    }*/
 }
 
 
@@ -494,6 +494,15 @@ int main()
     printf("Total_time : ");
     std::cin >>Total_time;
 
+    value_type Saved_time;
+    printf("Saved_time : ");
+    std::cin >>Saved_time;
+
+    if(Total_time<Saved_time)
+    {
+        printf("Error: total_time<Saved_time\n");
+        return 0;
+    }
     value_type dt;
     printf("dt : ");
     std::cin >>dt;
@@ -501,7 +510,7 @@ int main()
 
 	thrust::host_vector<value_type> x(2*N); //condiciones iniciales
 
-    int loops=number_of_loops(Total_time,N,dt);
+    int loops=number_of_loops(Saved_time,N,dt);
     if(loops==-1)
     {
         return 0;
@@ -529,19 +538,25 @@ int main()
 	state_type d_Fw(N);
     fillW(d_Fw,N,rng);
 
+    //state_type d_sum_placeholder(N);
+
 	state_type d_x(2*N);
     inicialcond(d_x,N,rng); ///
 ////////////////////////////////////////////////////////////////////////////
 
-    int steps_estim=(int)(Total_time/(dt*loops));
+    int steps_estim=(int)((Saved_time)/(dt*loops));
     state_type x_vec(2*N*steps_estim+1);
     thrust::host_vector<value_type> x_vec_host(2*N*steps_estim+1);
-    phase_oscillators sys(N,d_A,thrust::raw_pointer_cast(d_G.data()),thrust::raw_pointer_cast(d_I.data()),thrust::raw_pointer_cast(d_Fw.data()),thrust::raw_pointer_cast(d_F.data()));
+    phase_oscillators sys(N,d_A,thrust::raw_pointer_cast(d_G.data()),thrust::raw_pointer_cast(d_I.data()),thrust::raw_pointer_cast(d_Fw.data()),thrust::raw_pointer_cast(d_F.data())/*,d_sum_placeholder*/);
+    if(dt<Total_time-Saved_time)
+    {
+        integrate(N,x_vec,dt,d_x,sys,0,Total_time-Saved_time,x_vec_host,0,0);
+    }
     for (int i = 0; i < loops; ++i)
     {
-        value_type start_time=i*Total_time/loops;
-        value_type end_time=(i+1)*Total_time/loops;
-        integrate(N,x_vec,dt,d_x,sys,start_time,end_time,x_vec_host,i,loops);
+        value_type start_time=Total_time-Saved_time+i*(Saved_time)/loops;
+        value_type end_time=Total_time-Saved_time+(i+1)*(Saved_time)/loops;
+        integrate(N,x_vec,dt,d_x,sys,start_time,end_time,x_vec_host,i,1);
     }
      
 
